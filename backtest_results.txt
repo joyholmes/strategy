@@ -1,0 +1,44 @@
+==================================================
+Backtest Report for: 600030.SH
+Data Source: akshare
+Period: 20241101 to 20251101
+Report Generated at: 2025-11-18 20:02:17
+==================================================
+
+
+--- Strategy Parameters ---
+MACD Fast Period: 12
+MACD Slow Period: 26
+MACD Signal Period: 9
+Stake Percentage: 95.0%
+
+
+--- Final Capital Status ---
+Initial Portfolio Value: 100000.00
+Final Portfolio Value:   94356.22
+Final Cash:              5244.24
+Final Position Value:    89111.98
+Cumulative Commission:   -72.47
+
+
+--- Portfolio Performance ---
+Total Return:            -5.81%
+
+
+--- Performance Metrics ---
+Sharpe Ratio:            -52.33657496338313
+Max Drawdown:            9.79%
+
+
+--- Trade Statistics ---
+Total Trades:            9
+Winning Trades:          3
+Losing Trades:           5
+Win Rate:                33.33%
+Average Win ($):         2387.52
+Average Loss ($):        -2014.40
+Best Winning Trade ($):  4952.31
+Worst Losing Trade ($):  -3546.73
+
+
+==================================================
