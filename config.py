@@ -6,7 +6,7 @@ DATA_SOURCE = 'baostock'
 
 # Backtest settings
 ENABLE_BENCHMARK = True # Set to True to enable benchmark comparison
-STOCK_CODE = '600030.SH'
+STOCK_CODE = '000300.SH'
 START_DATE = '20241101'
 END_DATE = '20251101'
 INITIAL_CASH = 100000.0

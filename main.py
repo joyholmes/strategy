@@ -3,10 +3,11 @@ from data_fetcher import fetch_data
 from strategies.macd_strategy import MACDStrategy
 import config
 import datetime
+import os
 
-def generate_report(cerebro, strat, results, benchmark_return=None, buy_and_hold_return=None):
+def generate_report(cerebro, strat, results, output_folder, benchmark_return=None, buy_and_hold_return=None):
     """
-    Generates a text report from the backtest results.
+    Generates a text report from the backtest results and saves it to the output_folder.
     """
     analysis = strat.analyzers.getbyname('mytradeanalyzer').get_analysis()
     returns = strat.analyzers.getbyname('myreturns').get_analysis()
@@ -73,17 +74,24 @@ def generate_report(cerebro, strat, results, benchmark_return=None, buy_and_hold
 
     report_content = "\n".join(report_lines)
     
-    with open('backtest_results.txt', 'w') as f:
+    report_path = os.path.join(output_folder, 'backtest_results.txt')
+    with open(report_path, 'w') as f:
         f.write(report_content)
     
     print(report_content)
 
 
 if __name__ == '__main__':
-    cerebro = bt.Cerebro(stdstats=False) # Disable standard stats to customize plot
+    cerebro = bt.Cerebro(stdstats=False)
 
-    # Add a strategy
-    cerebro.addstrategy(MACDStrategy)
+    # --- Create output directory ---
+    strategy_name = MACDStrategy.__name__
+    folder_name = f"{config.STOCK_CODE}-{strategy_name}-{config.START_DATE}"
+    output_folder = os.path.join('results', folder_name)
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Add a strategy, passing the output folder
+    cerebro.addstrategy(MACDStrategy, output_folder=output_folder)
 
     # Add analyzers
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='mysharpe')
@@ -96,7 +104,6 @@ if __name__ == '__main__':
     cerebro.addobserver(bt.observers.Trades)
     cerebro.addobserver(bt.observers.BuySell)
     cerebro.addobserver(bt.observers.Value)
-
 
     # Fetch data and add to Cerebro
     data = fetch_data(config.STOCK_CODE, config.START_DATE, config.END_DATE)
@@ -138,10 +145,11 @@ if __name__ == '__main__':
     strat = results[0]
 
     # Generate and print the report
-    generate_report(cerebro, strat, results, benchmark_return, buy_and_hold_return)
+    generate_report(cerebro, strat, results, output_folder, benchmark_return, buy_and_hold_return)
 
     # Plot the result and save to file
-    print("Saving plot to backtest_plot.png...")
+    plot_path = os.path.join(output_folder, 'backtest_plot.png')
+    print(f"Saving plot to {plot_path}...")
     
     # Set plot parameters
     plot_params = {
@@ -160,7 +168,9 @@ if __name__ == '__main__':
     if figures and figures[0]:
         fig = figures[0][0]
         fig.set_size_inches(18.5, 10.5)
-        fig.savefig('backtest_plot.png', dpi=300)
+        fig.savefig(plot_path, dpi=300)
         print("Plot saved successfully.")
     else:
         print("Could not save plot.")
+
+    print(f"\nAll results saved in: {output_folder}")

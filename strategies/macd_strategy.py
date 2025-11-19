@@ -1,6 +1,7 @@
 import backtrader as bt
 from config import MACDStrategyParams
 import csv
+import os
 
 class MACDStrategy(bt.Strategy):
     params = (
@@ -8,19 +9,25 @@ class MACDStrategy(bt.Strategy):
         ('fastperiod', MACDStrategyParams.fastperiod),
         ('slowperiod', MACDStrategyParams.slowperiod),
         ('signalperiod', MACDStrategyParams.signalperiod),
+        ('output_folder', None), # Add parameter for output folder
     )
 
     def __init__(self):
         self.dataclose = self.datas[0].close
         self.order = None
 
-        # Prepare operation log file
-        self.op_log_file = open('operation_log.csv', 'w', newline='')
-        self.op_writer = csv.writer(self.op_log_file)
-        self.op_writer.writerow([
-            '操作日期', '操作类型', '成交价格', '成交数量', 
-            '成交后持仓', '持仓金额', '成交后现金', '总金额', '手续费'
-        ])
+        # Prepare operation log file in the specified output folder
+        if self.p.output_folder:
+            log_path = os.path.join(self.p.output_folder, 'operation_log.csv')
+            self.op_log_file = open(log_path, 'w', newline='')
+            self.op_writer = csv.writer(self.op_log_file)
+            self.op_writer.writerow([
+                '操作日期', '操作类型', '成交价格', '成交数量', 
+                '成交后持仓', '持仓金额', '成交后现金', '总金额', '手续费'
+            ])
+        else:
+            self.op_log_file = None
+            self.op_writer = None
 
         # Add a MACD indicator
         self.macd = bt.indicators.MACD(
