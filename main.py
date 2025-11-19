@@ -4,7 +4,7 @@ from strategies.macd_strategy import MACDStrategy
 import config
 import datetime
 
-def generate_report(cerebro, strat, results, benchmark_return=None):
+def generate_report(cerebro, strat, results, benchmark_return=None, buy_and_hold_return=None):
     """
     Generates a text report from the backtest results.
     """
@@ -43,7 +43,9 @@ def generate_report(cerebro, strat, results, benchmark_return=None):
 
     report_lines.append("--- Portfolio Performance ---")
     total_return = returns.get('rtot', 0)
-    report_lines.append(f"Total Return:            {total_return * 100:.2f}%")
+    report_lines.append(f"Strategy Total Return:   {total_return * 100:.2f}%")
+    if buy_and_hold_return is not None:
+        report_lines.append(f"Buy and Hold Return:     {buy_and_hold_return * 100:.2f}%")
     if benchmark_return is not None:
         report_lines.append(f"Benchmark (CSI 300) Return: {benchmark_return * 100:.2f}%")
     report_lines.append("\n")
@@ -101,6 +103,11 @@ if __name__ == '__main__':
     feed = bt.feeds.PandasData(dataname=data, name=config.STOCK_CODE)
     cerebro.adddata(feed)
 
+    # Calculate Buy and Hold return
+    buy_and_hold_return = None
+    if not data.empty:
+        buy_and_hold_return = (data['close'].iloc[-1] - data['close'].iloc[0]) / data['close'].iloc[0]
+
     # Fetch benchmark data (optional)
     benchmark_return = None
     if config.ENABLE_BENCHMARK:
@@ -131,7 +138,7 @@ if __name__ == '__main__':
     strat = results[0]
 
     # Generate and print the report
-    generate_report(cerebro, strat, results, benchmark_return)
+    generate_report(cerebro, strat, results, benchmark_return, buy_and_hold_return)
 
     # Plot the result and save to file
     print("Saving plot to backtest_plot.png...")

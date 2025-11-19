@@ -1,8 +1,8 @@
 ==================================================
 Backtest Report for: 600030.SH
-Data Source: akshare
+Data Source: baostock
 Period: 20241101 to 20251101
-Report Generated at: 2025-11-18 20:02:17
+Report Generated at: 2025-11-19 15:10:50
 ==================================================
 
 
@@ -15,19 +15,21 @@ Stake Percentage: 95.0%
 
 --- Final Capital Status ---
 Initial Portfolio Value: 100000.00
-Final Portfolio Value:   94356.22
-Final Cash:              5244.24
-Final Position Value:    89111.98
-Cumulative Commission:   -72.47
+Final Portfolio Value:   94363.99
+Final Cash:              5244.67
+Final Position Value:    89119.32
+Cumulative Commission:   -72.50
 
 
 --- Portfolio Performance ---
-Total Return:            -5.81%
+Strategy Total Return:   -5.80%
+Buy and Hold Return:     6.88%
+Benchmark (CSI 300) Return: 19.30%
 
 
 --- Performance Metrics ---
-Sharpe Ratio:            -52.33657496338313
-Max Drawdown:            9.79%
+Sharpe Ratio:            -76.39133750985323
+Max Drawdown:            9.69%
 
 
 --- Trade Statistics ---
@@ -35,10 +37,10 @@ Total Trades:            9
 Winning Trades:          3
 Losing Trades:           5
 Win Rate:                33.33%
-Average Win ($):         2387.52
-Average Loss ($):        -2014.40
-Best Winning Trade ($):  4952.31
-Worst Losing Trade ($):  -3546.73
+Average Win ($):         2358.27
+Average Loss ($):        -1995.25
+Best Winning Trade ($):  4904.64
+Worst Losing Trade ($):  -3513.81
 
 
 ==================================================

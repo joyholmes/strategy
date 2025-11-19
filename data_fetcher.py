@@ -1,5 +1,6 @@
 import tushare as ts
 import akshare as ak
+import baostock as bs
 import pandas as pd
 from datetime import datetime
 from config import TUSHARE_TOKEN, DATA_SOURCE
@@ -74,6 +75,52 @@ def _fetch_from_akshare(stock_code, start_date, end_date):
     df = df.sort_index()
     return df
 
+def _fetch_from_baostock(stock_code, start_date, end_date):
+    """Fetch data from Baostock."""
+    lg = bs.login()
+    if lg.error_code != '0':
+        raise ConnectionError(f"Baostock login failed: {lg.error_msg}")
+
+    # Convert stock code format (e.g., 600030.SH -> sh.600030)
+    parts = stock_code.split('.')
+    bs_stock_code = f"{parts[1].lower()}.{parts[0]}"
+    
+    # Format dates
+    start_date_bs = datetime.strptime(start_date, '%Y%m%d').strftime('%Y-%m-%d')
+    end_date_bs = datetime.strptime(end_date, '%Y%m%d').strftime('%Y-%m-%d')
+
+    rs = bs.query_history_k_data_plus(
+        bs_stock_code,
+        "date,open,high,low,close,volume",
+        start_date=start_date_bs,
+        end_date=end_date_bs,
+        frequency="d",
+        adjustflag="2"  # qfq: 前复权
+    )
+    
+    if rs.error_code != '0':
+        bs.logout()
+        raise ValueError(f"Failed to fetch data from Baostock for code {bs_stock_code}: {rs.error_msg}")
+
+    data_list = []
+    while (rs.error_code == '0') & rs.next():
+        data_list.append(rs.get_row_data())
+    
+    df = pd.DataFrame(data_list, columns=rs.fields)
+    bs.logout()
+
+    if df.empty:
+        raise ValueError(f"No data returned from Baostock for code {bs_stock_code}.")
+
+    # Convert data types
+    for col in ['open', 'high', 'low', 'close', 'volume']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    df.index = pd.to_datetime(df.date)
+    df = df.sort_index()
+    return df
+
+
 def fetch_data(stock_code, start_date, end_date):
     """
     Fetch stock data from the selected data source in config.
@@ -82,8 +129,10 @@ def fetch_data(stock_code, start_date, end_date):
         df = _fetch_from_tushare(stock_code, start_date, end_date)
     elif DATA_SOURCE == 'akshare':
         df = _fetch_from_akshare(stock_code, start_date, end_date)
+    elif DATA_SOURCE == 'baostock':
+        df = _fetch_from_baostock(stock_code, start_date, end_date)
     else:
-        raise ValueError(f"Unsupported data source: {DATA_SOURCE}. Please choose 'tushare' or 'akshare' in config.py.")
+        raise ValueError(f"Unsupported data source: {DATA_SOURCE}. Please choose 'tushare', 'akshare', or 'baostock' in config.py.")
 
     # Prepare data for backtrader
     df['openinterest'] = 0

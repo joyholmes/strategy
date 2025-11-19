@@ -1,8 +1,8 @@
 # tushare_token.py
 TUSHARE_TOKEN = '36c643f995ba9828b822f1872dda95372f89787eb912dad38c3b0375'  # Replace with your Tushare token
 
-# Data source: 'tushare' or 'akshare'
-DATA_SOURCE = 'akshare'
+# Data source: 'tushare' or 'akshare' or 'baostock'
+DATA_SOURCE = 'baostock'
 
 # Backtest settings
 ENABLE_BENCHMARK = True # Set to True to enable benchmark comparison

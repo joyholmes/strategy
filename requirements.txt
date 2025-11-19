@@ -3,3 +3,4 @@ tushare
 pandas
 matplotlib
 akshare
+baostock
