@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     # --- Create output directory ---
     strategy_name = MACDStrategy.__name__
-    folder_name = f"{config.STOCK_CODE}-{strategy_name}-{config.START_DATE}"
+    folder_name = f"{config.STOCK_CODE}-{strategy_name}-{config.START_DATE}-{config.END_DATE}"
     output_folder = os.path.join('results', folder_name)
     os.makedirs(output_folder, exist_ok=True)
 
