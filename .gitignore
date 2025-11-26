@@ -3,4 +3,7 @@ __pycache__/
 *.pyc
 
 # Results
-results/.DS_Store
+results/
+
+# macOS
+.DS_Store
