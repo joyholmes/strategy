@@ -4,17 +4,20 @@ from strategies.macd_strategy import MACDStrategy
 import config
 import datetime
 import os
+import csv
 
 def generate_report(cerebro, strat, results, output_folder, benchmark_return=None, buy_and_hold_return=None):
     """
-    Generates a text report from the backtest results and saves it to the output_folder.
+    Generates a text report and returns a dictionary with key metrics.
     """
     analysis = strat.analyzers.getbyname('mytradeanalyzer').get_analysis()
     returns = strat.analyzers.getbyname('myreturns').get_analysis()
     sharpe = strat.analyzers.getbyname('mysharpe').get_analysis()
     drawdown = strat.analyzers.getbyname('mydrawdown').get_analysis()
 
+    # --- Generate Text Report ---
     report_lines = []
+    # ... (rest of the text report generation is the same)
     report_lines.append("="*50)
     report_lines.append(f"Backtest Report for: {config.STOCK_CODE}")
     report_lines.append(f"Data Source: {config.DATA_SOURCE}")
@@ -33,45 +36,41 @@ def generate_report(cerebro, strat, results, output_folder, benchmark_return=Non
     report_lines.append("--- Final Capital Status ---")
     report_lines.append(f"Initial Portfolio Value: {cerebro.broker.startingcash:.2f}")
     report_lines.append(f"Final Portfolio Value:   {cerebro.broker.getvalue():.2f}")
-    report_lines.append(f"Final Cash:              {cerebro.broker.getcash():.2f}")
-    report_lines.append(f"Final Position Value:    {cerebro.broker.getvalue() - cerebro.broker.getcash():.2f}")
     
-    total_comm = 0
-    if 'total' in analysis and analysis.get('total', {}).get('total', 0) > 0:
-        total_comm = analysis.pnl.net.total - analysis.pnl.gross.total
-    report_lines.append(f"Cumulative Commission:   {total_comm:.2f}")
+    total_return_pct = returns.get('rtot', 0) * 100
+    buy_and_hold_pct = (buy_and_hold_return * 100) if buy_and_hold_return is not None else 'N/A'
+    benchmark_return_pct = (benchmark_return * 100) if benchmark_return is not None else 'N/A'
+    
     report_lines.append("\n")
-
     report_lines.append("--- Portfolio Performance ---")
-    total_return = returns.get('rtot', 0)
-    report_lines.append(f"Strategy Total Return:   {total_return * 100:.2f}%")
+    report_lines.append(f"Strategy Total Return:   {total_return_pct:.2f}%")
     if buy_and_hold_return is not None:
-        report_lines.append(f"Buy and Hold Return:     {buy_and_hold_return * 100:.2f}%")
+        report_lines.append(f"Buy and Hold Return:     {buy_and_hold_pct:.2f}%")
     if benchmark_return is not None:
-        report_lines.append(f"Benchmark (CSI 300) Return: {benchmark_return * 100:.2f}%")
+        report_lines.append(f"Benchmark (CSI 300) Return: {benchmark_return_pct:.2f}%")
     report_lines.append("\n")
 
+    sharpe_ratio = sharpe.get('sharperatio', 'N/A')
+    max_drawdown_pct = drawdown.max.drawdown
+    
     report_lines.append("--- Performance Metrics ---")
-    report_lines.append(f"Sharpe Ratio:            {sharpe.get('sharperatio', 'N/A')}")
-    report_lines.append(f"Max Drawdown:            {drawdown.max.drawdown:.2f}%")
+    report_lines.append(f"Sharpe Ratio:            {sharpe_ratio}")
+    report_lines.append(f"Max Drawdown:            {max_drawdown_pct:.2f}%")
     report_lines.append("\n")
+
+    total_trades = analysis.total.total if 'total' in analysis else 0
+    win_rate_pct = (analysis.won.total / total_trades * 100) if total_trades > 0 else 0
 
     report_lines.append("--- Trade Statistics ---")
-    if 'total' in analysis and analysis.get('total', {}).get('total', 0) > 0:
-        report_lines.append(f"Total Trades:            {analysis.total.total}")
+    if total_trades > 0:
+        report_lines.append(f"Total Trades:            {total_trades}")
         report_lines.append(f"Winning Trades:          {analysis.won.total}")
         report_lines.append(f"Losing Trades:           {analysis.lost.total}")
-        report_lines.append(f"Win Rate:                {analysis.won.total / analysis.total.total * 100:.2f}%")
-        report_lines.append(f"Average Win ($):         {analysis.won.pnl.average:.2f}")
-        report_lines.append(f"Average Loss ($):        {analysis.lost.pnl.average:.2f}")
-        report_lines.append(f"Best Winning Trade ($):  {analysis.won.pnl.max:.2f}")
-        report_lines.append(f"Worst Losing Trade ($):  {analysis.lost.pnl.max:.2f}")
+        report_lines.append(f"Win Rate:                {win_rate_pct:.2f}%")
     else:
         report_lines.append("No trades were executed.")
     
-    report_lines.append("\n")
-    report_lines.append("="*50)
-
+    report_lines.append("\n"+"="*50)
     report_content = "\n".join(report_lines)
     
     report_path = os.path.join(output_folder, 'backtest_results.txt')
@@ -80,13 +79,60 @@ def generate_report(cerebro, strat, results, output_folder, benchmark_return=Non
     
     print(report_content)
 
+    # --- Return summary dictionary ---
+    summary = {
+        'StockCode': config.STOCK_CODE,
+        'Strategy': MACDStrategy.__name__,
+        'StartDate': config.START_DATE,
+        'EndDate': config.END_DATE,
+        'MACD_Fast': strat.params.fastperiod,
+        'MACD_Slow': strat.params.slowperiod,
+        'MACD_Signal': strat.params.signalperiod,
+        'TotalReturnPct': f"{total_return_pct:.2f}",
+        'BuyAndHoldReturnPct': f"{buy_and_hold_pct:.2f}" if isinstance(buy_and_hold_pct, float) else 'N/A',
+        'BenchmarkReturnPct': f"{benchmark_return_pct:.2f}" if isinstance(benchmark_return_pct, float) else 'N/A',
+        'MaxDrawdownPct': f"{max_drawdown_pct:.2f}",
+        'SharpeRatio': f"{sharpe_ratio:.4f}" if isinstance(sharpe_ratio, float) else 'N/A',
+        'WinRatePct': f"{win_rate_pct:.2f}",
+        'TotalTrades': total_trades,
+    }
+    return summary
+
+def update_summary(summary_data, run_timestamp, folder_name):
+    """
+    Appends the summary of the backtest to the summary.csv file.
+    """
+    summary_file = os.path.join('results', 'summary.csv')
+    
+    # Add run-specific info to the summary
+    summary_data['RunTimestamp'] = run_timestamp
+    summary_data['ResultFolder'] = folder_name
+
+    header = [
+        'StockCode', 'Strategy', 'StartDate', 'EndDate', 
+        'MACD_Fast', 'MACD_Slow', 'MACD_Signal', 'TotalReturnPct', 'BuyAndHoldReturnPct',
+        'BenchmarkReturnPct', 'MaxDrawdownPct', 'SharpeRatio', 'WinRatePct', 'TotalTrades',
+        'RunTimestamp', 'ResultFolder'
+    ]
+
+    file_exists = os.path.isfile(summary_file)
+    
+    with open(summary_file, 'a', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=header)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(summary_data)
+    
+    print(f"\nSummary appended to {summary_file}")
+
 
 if __name__ == '__main__':
     cerebro = bt.Cerebro(stdstats=False)
 
-    # --- Create output directory ---
+    # --- Create unique output directory ---
     strategy_name = MACDStrategy.__name__
-    folder_name = f"{config.STOCK_CODE}-{strategy_name}-{config.START_DATE}-{config.END_DATE}"
+    run_timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    folder_name = f"{config.STOCK_CODE}-{strategy_name}-{config.START_DATE}-{config.END_DATE}-{run_timestamp}"
     output_folder = os.path.join('results', folder_name)
     os.makedirs(output_folder, exist_ok=True)
 
@@ -99,6 +145,7 @@ if __name__ == '__main__':
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='mydrawdown')
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='mytradeanalyzer')
     
+    # ... (rest of the setup is the same)
     # Add Observers
     cerebro.addobserver(bt.observers.Broker)
     cerebro.addobserver(bt.observers.Trades)
@@ -144,8 +191,11 @@ if __name__ == '__main__':
     results = cerebro.run()
     strat = results[0]
 
-    # Generate and print the report
-    generate_report(cerebro, strat, results, output_folder, benchmark_return, buy_and_hold_return)
+    # Generate report and get summary
+    summary_data = generate_report(cerebro, strat, results, output_folder, benchmark_return, buy_and_hold_return)
+
+    # Update the master summary file
+    update_summary(summary_data, run_timestamp, folder_name)
 
     # Plot the result and save to file
     plot_path = os.path.join(output_folder, 'backtest_plot.png')

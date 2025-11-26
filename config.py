@@ -7,8 +7,13 @@ DATA_SOURCE = 'baostock'
 # Backtest settings
 ENABLE_BENCHMARK = True # Set to True to enable benchmark comparison
 STOCK_CODE = '000300.SH'
-START_DATE = '20241101'
-END_DATE = '20251101'
+
+# 牛市周期 20241101 - 20251101
+# 熊市周期 20230201 - 20240201
+# 震荡周期 20201101 - 20251101
+
+START_DATE = '20230201'
+END_DATE = '20240201'
 INITIAL_CASH = 100000.0
 STAKE_PERCENT = 0.95  # Percentage of portfolio to trade
 COMMISSION = 0.00005  # Commission fee
