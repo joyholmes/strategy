@@ -17,9 +17,42 @@
 ├── data_fetcher.py         # 数据获取模块
 ├── main.py                 # 回测主程序
 ├── README.md               # 项目说明文档
-├── requirements.txt        # Python 依赖库
-└── strategies              # 策略目录
-    └── macd_strategy.py    # MACD 示例策略
+├── requirements.txt                # Python 依赖库
+├── doc                             # 文档目录
+│   ├── 仓位管理.md                  # 仓位管理策略文档
+│   └── 仓位管理使用指南.md           # 使用指南
+├── strategies                      # 策略目录
+│   ├── macd_strategy.py            # MACD 示例策略
+│   └── position_management_strategy.py  # 仓位管理策略
+├── main.py                         # MACD策略回测主程序
+└── main_position_management.py     # 仓位管理策略回测主程序
+```
+
+## 可用策略
+
+### 1. MACD策略
+基于MACD指标的趋势跟踪策略，适合趋势明显的市场。
+
+**运行方式**：
+```bash
+python main.py
+```
+
+### 2. 仓位管理策略 ⭐ 新增
+基于波动率的多周期动态仓位管理策略，通过分散投资和动态调仓实现风险控制。
+
+**运行方式**：
+```bash
+python main_position_management.py
+```
+
+**特点**：
+- 多周期分散投资（默认4个周期）
+- 根据波动率阈值自动调仓
+- 考虑GDP增长的资金基准
+- 详细的操作日志和周期分析
+
+**详细说明**：请参考 [`doc/仓位管理使用指南.md`](doc/仓位管理使用指南.md)
 ```
 
 ## 使用指南
