@@ -22,6 +22,7 @@ class CycleTracker:
         
         # 资金统计
         self.total_invested = 0  # 累计投入
+        self.net_invested = 0    # 累计净投入 (新增：考虑卖出资金回笼)
         self.max_single_add = 0  # 单次最大追加
         self.rebalance_count = 0  # 调仓次数
         self.buy_count = 0  # 补仓次数
@@ -130,7 +131,7 @@ class PositionManagementStrategy(bt.Strategy):
             self.detail_writer = csv.writer(self.detail_log_file)
             self.detail_writer.writerow([
                 '日期', '周期ID', '当前价格', '持仓数量', '当前市值',
-                '距上次调仓天数', '相对涨跌幅', '累计投入', '最大回撤'
+                '距上次调仓天数', '相对涨跌幅', '累计投入', '累计净投入', '最大回撤'
             ])
         else:
             self.op_log_file = None
@@ -209,6 +210,7 @@ class PositionManagementStrategy(bt.Strategy):
                     tracker.days_since_rebalance,
                     f'{change_ratio*100:.2f}%',
                     f'{tracker.total_invested:.2f}',
+                    f'{tracker.net_invested:.2f}',
                     f'{tracker.max_drawdown*100:.2f}%'
                 ])
     
@@ -230,6 +232,7 @@ class PositionManagementStrategy(bt.Strategy):
         tracker.last_rebalance_date = date
         tracker.days_since_rebalance = 0
         tracker.total_invested = actual_cost
+        tracker.net_invested = actual_cost
         tracker.rebalance_count += 1
         tracker.buy_count += 1
         tracker.max_value = actual_cost
@@ -280,6 +283,7 @@ class PositionManagementStrategy(bt.Strategy):
             # 更新统计
             tracker.position_size += shares_to_buy
             tracker.total_invested += actual_cost
+            tracker.net_invested += actual_cost
             if actual_cost > tracker.max_single_add:
                 tracker.max_single_add = actual_cost
             tracker.buy_count += 1
@@ -304,6 +308,7 @@ class PositionManagementStrategy(bt.Strategy):
             # 更新统计
             tracker.position_size -= shares_to_sell
             # 减仓不增加投入，但要记录
+            tracker.net_invested -= actual_value
             tracker.sell_count += 1
             
             # 记录现金流（卖出为正）
@@ -369,6 +374,7 @@ class PositionManagementStrategy(bt.Strategy):
             print(f"  VIX阈值: {tracker.vix_threshold*100:.1f}%")
             print(f"  初始投入: {tracker.initial_cash:,.2f}")
             print(f"  累计投入: {tracker.total_invested:,.2f}")
+            print(f"  累计净投入: {tracker.net_invested:,.2f}")
             print(f"  最大追加: {tracker.max_single_add:,.2f}")
             print(f"  期末市值: {final_value:,.2f}")
             print(f"  绝对收益: {final_value - tracker.total_invested:,.2f}")
@@ -387,6 +393,7 @@ class PositionManagementStrategy(bt.Strategy):
         print(f"\n【整体策略】")
         print(f"  总初始投入: {total_initial:,.2f}")
         print(f"  总累计投入: {total_invested:,.2f}")
+        print(f"  总累计净投入: {sum(t.net_invested for t in self.cycle_trackers):,.2f}")
         print(f"  总最大追加: {total_max_add:,.2f}")
         print(f"  总期末市值: {total_final_value:,.2f}")
         print(f"  总绝对收益: {total_final_value - total_invested:,.2f}")

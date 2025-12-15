@@ -76,6 +76,7 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
     cycle_data = []
     total_initial = 0
     total_invested = 0
+    total_net_invested = 0
     total_final_value = 0
     total_max_add = 0
     total_rebalance_count = 0
@@ -85,8 +86,15 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
         final_value = tracker.get_current_value(final_price)
         
         # 计算各种收益率
+        # 计算各种收益率
+        absolute_profit = final_value - tracker.net_invested  # 绝对收益 = 期末市值 - 净投入
         nominal_return = (final_value - tracker.initial_cash) / tracker.initial_cash * 100  # 相对初始投入
-        actual_return = (final_value - tracker.total_invested) / tracker.total_invested * 100 if tracker.total_invested > 0 else 0  # 实际投资收益率
+        
+        # 实际投资收益率 (基于净投入)
+        if tracker.net_invested > 0:
+            actual_return = absolute_profit / tracker.net_invested * 100
+        else:
+            actual_return = 0  # 净投入为负或0，收益率无意义（或无穷大）
         
         # 计算平均持仓成本收益率
         avg_cost = tracker.total_invested / tracker.position_size if tracker.position_size > 0 else 0
@@ -103,11 +111,12 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
             'vix_threshold': tracker.vix_threshold * 100,
             'initial_cash': tracker.initial_cash,
             'total_invested': tracker.total_invested,
+            'net_invested': tracker.net_invested,
             'max_single_add': tracker.max_single_add,
             'final_value': final_value,
-            'absolute_profit': final_value - tracker.total_invested,
+            'absolute_profit': absolute_profit,
             'nominal_return': nominal_return,  # 改名：相对初始投入收益率
-            'actual_return': actual_return,    # 新增：实际投资收益率
+            'actual_return': actual_return,    # 改名：净投入收益率
             'avg_cost': avg_cost,              # 新增：平均持仓成本
             'avg_cost_return': avg_cost_return,  # 新增：平均成本收益率
             'irr': cycle_irr,                  # 新增：IRR年化收益率
@@ -121,6 +130,7 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
         
         total_initial += tracker.initial_cash
         total_invested += tracker.total_invested
+        total_net_invested += tracker.net_invested
         total_final_value += final_value
         total_max_add += tracker.max_single_add
         total_rebalance_count += tracker.rebalance_count
@@ -128,8 +138,13 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
     
     # 计算整体指标
     total_nominal_return = (total_final_value - total_initial) / total_initial * 100  # 相对初始投入
-    total_actual_return = (total_final_value - total_invested) / total_invested * 100 if total_invested > 0 else 0  # 实际投资收益率
-    total_absolute_profit = total_final_value - total_invested
+    total_absolute_profit = total_final_value - total_net_invested
+    
+    if total_net_invested > 0:
+        total_actual_return = total_absolute_profit / total_net_invested * 100
+    else:
+        total_actual_return = 0
+        
     total_irr = calculate_irr(all_cash_flows, total_final_value, final_date)  # 整体IRR
     total_capital_efficiency = total_final_value / total_invested if total_invested > 0 else 0
     
@@ -157,13 +172,14 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
         report_lines.append(f"\n【{cycle['cycle_id']}】")
         report_lines.append(f"  VIX阈值:              {cycle['vix_threshold']:.1f}%")
         report_lines.append(f"  初始投入:             {cycle['initial_cash']:>15,.2f}")
-        report_lines.append(f"  累计投入:             {cycle['total_invested']:>15,.2f}")
+        report_lines.append(f"  累计投入(Gross):      {cycle['total_invested']:>15,.2f}")
+        report_lines.append(f"  累计净投入(Net):      {cycle['net_invested']:>15,.2f}")
         report_lines.append(f"  最大追加:             {cycle['max_single_add']:>15,.2f}")
         report_lines.append(f"  期末市值:             {cycle['final_value']:>15,.2f}")
         report_lines.append(f"  绝对收益:             {cycle['absolute_profit']:>15,.2f}")
         report_lines.append(f"  --- 收益率指标 ---")
         report_lines.append(f"  相对初始投入收益率:   {cycle['nominal_return']:>14.2f}%")
-        report_lines.append(f"  实际投资收益率:       {cycle['actual_return']:>14.2f}%  ⭐")
+        report_lines.append(f"  净投入收益率:         {cycle['actual_return']:>14.2f}%  ⭐")
         report_lines.append(f"  IRR年化收益率:        {cycle['irr']:>14.2f}%  ⭐⭐")
         report_lines.append(f"  平均成本收益率:       {cycle['avg_cost_return']:>14.2f}%")
         report_lines.append(f"  --- 其他指标 ---")
@@ -178,13 +194,14 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
     # 整体策略表现
     report_lines.append("--- 整体策略表现 ---")
     report_lines.append(f"总初始投入:           {total_initial:>15,.2f}")
-    report_lines.append(f"总累计投入:           {total_invested:>15,.2f}")
+    report_lines.append(f"总累计投入(Gross):    {total_invested:>15,.2f}")
+    report_lines.append(f"总累计净投入(Net):    {total_net_invested:>15,.2f}")
     report_lines.append(f"总最大追加:           {total_max_add:>15,.2f}")
     report_lines.append(f"总期末市值:           {total_final_value:>15,.2f}")
     report_lines.append(f"总绝对收益:           {total_absolute_profit:>15,.2f}")
     report_lines.append(f"--- 收益率指标 ---")
     report_lines.append(f"相对初始投入收益率:   {total_nominal_return:>14.2f}%")
-    report_lines.append(f"实际投资收益率:       {total_actual_return:>14.2f}%  ⭐ (真实收益)")
+    report_lines.append(f"净投入收益率:         {total_actual_return:>14.2f}%  ⭐ (真实收益)")
     report_lines.append(f"IRR年化收益率:        {total_irr:>14.2f}%  ⭐⭐ (最准确)")
     report_lines.append(f"资金使用效率:         {total_capital_efficiency:>15.3f}")
     report_lines.append(f"总调仓次数:           {total_rebalance_count:>15}")
@@ -226,9 +243,10 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
         'EndDate': config.END_DATE,
         'TotalInitial': f"{total_initial:.2f}",
         'TotalInvested': f"{total_invested:.2f}",
+        'TotalNetInvested': f"{total_net_invested:.2f}",
         'TotalFinalValue': f"{total_final_value:.2f}",
         'NominalReturnPct': f"{total_nominal_return:.2f}",  # 相对初始投入收益率
-        'ActualReturnPct': f"{total_actual_return:.2f}",    # 实际投资收益率
+        'ActualReturnPct': f"{total_actual_return:.2f}",    # 净投入收益率
         'IRR_Pct': f"{total_irr:.2f}",                      # IRR年化收益率
         'CapitalEfficiency': f"{total_capital_efficiency:.3f}",  # 资金使用效率
         'BuyAndHoldReturnPct': f"{buy_and_hold_return*100:.2f}" if buy_and_hold_return else 'N/A',
@@ -250,7 +268,7 @@ def update_summary(summary_data, run_timestamp, folder_name):
     
     header = [
         'StockCode', 'Strategy', 'StartDate', 'EndDate',
-        'TotalInitial', 'TotalInvested', 'TotalFinalValue', 
+        'TotalInitial', 'TotalInvested', 'TotalNetInvested', 'TotalFinalValue', 
         'NominalReturnPct', 'ActualReturnPct', 'IRR_Pct', 'CapitalEfficiency',
         'BuyAndHoldReturnPct', 'BenchmarkReturnPct', 'TotalRebalanceCount',
         'RunTimestamp', 'ResultFolder'
