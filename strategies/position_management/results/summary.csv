@@ -1,2 +1,3 @@
 StockCode,Strategy,StartDate,EndDate,TotalInitial,TotalInvested,TotalNetInvested,TotalFinalValue,NominalReturnPct,ActualReturnPct,IRR_Pct,CapitalEfficiency,BuyAndHoldReturnPct,BenchmarkReturnPct,TotalRebalanceCount,RunTimestamp,ResultFolder
 000300.SH,PositionManagement,20210101,20251201,100000.00,198134.60,119000.88,112078.13,12.08,-5.82,-1.16,0.566,-13.12,N/A,270,20251216151106,000300.SH-PositionManagement-20210101-20251201-20251216151106
+000300.SH,PositionManagement,20210101,20251201,100000.00,198134.60,119000.88,112078.13,-5.82,-1.16,-13.12,N/A,270,20251216151439,000300.SH-PositionManagement-20210101-20251201-20251216151439
