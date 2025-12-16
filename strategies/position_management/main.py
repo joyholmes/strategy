@@ -102,7 +102,7 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
     report_lines.append("=" * 80)
     report_lines.append(f"仓位管理策略回测报告")
     report_lines.append(f"回测标的: {config.STOCK_CODE}")
-    report_lines.append(f"数据源: {config.DATA_SOURCE}")
+    report_lines.append(f"数据源: {global_config.DATA_SOURCE}")
     report_lines.append(f"回测区间: {config.START_DATE} 至 {config.END_DATE}")
     report_lines.append(f"报告生成时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     report_lines.append("=" * 80)
