@@ -1,9 +1,4 @@
-# Python
 __pycache__/
 *.pyc
-
-# Results
-results/
-
-# macOS
 .DS_Store
+*.log

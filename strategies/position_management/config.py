@@ -1,32 +1,12 @@
-# tushare_token.py
-TUSHARE_TOKEN = '36c643f995ba9828b822f1872dda95372f89787eb912dad38c3b0375'  # Replace with your Tushare token
+# 仓位管理策略配置
 
-# Data source: 'tushare' or 'akshare' or 'baostock'
-DATA_SOURCE = 'baostock'
-
-# Backtest settings
-ENABLE_BENCHMARK = True # Set to True to enable benchmark comparison
+# 回测设置
 STOCK_CODE = '000300.SH'
-
-# 牛市周期 20241101 - 20251101
-# 熊市周期 20230201 - 20240201
-# 震荡周期 20210101 - 20220101
-# 长周期 20210101 - 20251201
-
 START_DATE = '20210101'
 END_DATE = '20251201'
 INITIAL_CASH = 100000.0
-STAKE_PERCENT = 0.95  # Percentage of portfolio to trade
-COMMISSION = 0.00005  # Commission fee
 
-# Strategy parameters
-class MACDStrategyParams:
-    maperiod = 15
-    fastperiod = 12
-    slowperiod = 26
-    signalperiod = 9
-
-# Position Management Strategy parameters
+# 仓位管理策略参数
 class PositionManagementParams:
     # 总初始资金
     total_initial_cash = 100000.0
@@ -62,4 +42,3 @@ class PositionManagementParams:
             'vix_threshold': 0.16  # 16%
         },
     ]
-

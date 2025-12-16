@@ -1,0 +1,46 @@
+==================================================
+Backtest Report for: 000300.SH
+Data Source: baostock
+Period: 20230201 to 20240201
+Report Generated at: 2025-11-25 11:52:50
+==================================================
+
+
+--- Strategy Parameters ---
+MACD Fast Period: 12
+MACD Slow Period: 26
+MACD Signal Period: 9
+Stake Percentage: 95.0%
+
+
+--- Final Capital Status ---
+Initial Portfolio Value: 100000.00
+Final Portfolio Value:   87422.00
+Final Cash:              4511.42
+Final Position Value:    82910.58
+Cumulative Commission:   -90.78
+
+
+--- Portfolio Performance ---
+Strategy Total Return:   -13.44%
+Buy and Hold Return:     -23.31%
+Benchmark (CSI 300) Return: -23.31%
+
+
+--- Performance Metrics ---
+Sharpe Ratio:            -4.996962631398552
+Max Drawdown:            15.40%
+
+
+--- Trade Statistics ---
+Total Trades:            11
+Winning Trades:          0
+Losing Trades:           10
+Win Rate:                0.00%
+Average Win ($):         0.00
+Average Loss ($):        -1111.46
+Best Winning Trade ($):  0.00
+Worst Losing Trade ($):  -2019.23
+
+
+==================================================
