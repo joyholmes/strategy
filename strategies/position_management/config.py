@@ -6,6 +6,9 @@ START_DATE = '20210101'
 END_DATE = '20251201'
 INITIAL_CASH = 100000.0
 
+# 从全局配置导入
+from config.global_config import COMMISSION, ENABLE_BENCHMARK
+
 # 仓位管理策略参数
 class PositionManagementParams:
     # 总初始资金

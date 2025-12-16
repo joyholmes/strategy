@@ -1,5 +1,5 @@
 import backtrader as bt
-from config import PositionManagementParams
+from .config import PositionManagementParams
 import csv
 import os
 from datetime import datetime

@@ -3,7 +3,7 @@ import akshare as ak
 import baostock as bs
 import pandas as pd
 from datetime import datetime
-from config import TUSHARE_TOKEN, DATA_SOURCE
+from config.global_config import TUSHARE_TOKEN, DATA_SOURCE
 import os
 
 def _fetch_from_tushare(stock_code, start_date, end_date):

@@ -11,7 +11,7 @@ echo ""
 echo "1/4 运行长周期回测 (2021-01-01 至 2025-12-01)..."
 sed -i '' "s/START_DATE = '.*'/START_DATE = '20210101'/" config.py
 sed -i '' "s/END_DATE = '.*'/END_DATE = '20251201'/" config.py
-python main_position_management.py > /dev/null 2>&1
+python main.py > /dev/null 2>&1
 echo "✓ 长周期回测完成"
 
 # 2. 熊市周期 (2023-02-01 至 2024-02-01)
@@ -19,7 +19,7 @@ echo ""
 echo "2/4 运行熊市周期回测 (2023-02-01 至 2024-02-01)..."
 sed -i '' "s/START_DATE = '.*'/START_DATE = '20230201'/" config.py
 sed -i '' "s/END_DATE = '.*'/END_DATE = '20240201'/" config.py
-python main_position_management.py > /dev/null 2>&1
+python main.py > /dev/null 2>&1
 echo "✓ 熊市周期回测完成"
 
 # 3. 牛市周期 (2024-11-01 至 2025-12-01)
@@ -27,7 +27,7 @@ echo ""
 echo "3/4 运行牛市周期回测 (2024-11-01 至 2025-12-01)..."
 sed -i '' "s/START_DATE = '.*'/START_DATE = '20241101'/" config.py
 sed -i '' "s/END_DATE = '.*'/END_DATE = '20251201'/" config.py
-python main_position_management.py > /dev/null 2>&1
+python main.py > /dev/null 2>&1
 echo "✓ 牛市周期回测完成"
 
 # 4. 震荡周期 (2021-01-01 至 2022-01-01)
@@ -35,7 +35,7 @@ echo ""
 echo "4/4 运行震荡周期回测 (2021-01-01 至 2022-01-01)..."
 sed -i '' "s/START_DATE = '.*'/START_DATE = '20210101'/" config.py
 sed -i '' "s/END_DATE = '.*'/END_DATE = '20220101'/" config.py
-python main_position_management.py > /dev/null 2>&1
+python main.py > /dev/null 2>&1
 echo "✓ 震荡周期回测完成"
 
 # 恢复默认配置（长周期）
