@@ -231,6 +231,12 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
         'Strategy': 'GridTrading',
         'StartDate': config.START_DATE,
         'EndDate': config.END_DATE,
+        # 策略参数
+        'InitialPositionRatio': f"{config.GridTradingParams.initial_position_ratio:.2f}",
+        'GridBuyPercent': f"{config.GridTradingParams.grid_buy_percent:.2f}",
+        'GridSellPercent': f"{config.GridTradingParams.grid_sell_percent:.2f}",
+        'TradePercent': f"{config.GridTradingParams.trade_percent:.2f}",
+        # 回测结果
         'TotalInitial': f"{strat.initial_cash:.2f}",
         'TotalInvested': f"{strat.total_invested:.2f}",
         'TotalNetInvested': f"{strat.net_invested:.2f}",
@@ -256,6 +262,7 @@ def update_summary(summary_data, run_timestamp, folder_name):
     
     header = [
         'StockCode', 'Strategy', 'StartDate', 'EndDate',
+        'InitialPositionRatio', 'GridBuyPercent', 'GridSellPercent', 'TradePercent',
         'TotalInitial', 'TotalInvested', 'TotalNetInvested', 'TotalFinalValue', 
         'ActualReturnPct', 'IRR_Pct',
         'BuyAndHoldReturnPct', 'BenchmarkReturnPct', 'TotalTrades',
