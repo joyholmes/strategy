@@ -226,6 +226,8 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
     print(report_content)
     
     # 返回汇总数据
+    final_net_profit = final_value - strat.net_invested  # 末期净收益
+    
     summary = {
         'StockCode': config.STOCK_CODE,
         'Strategy': 'GridTrading',
@@ -241,8 +243,8 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
         'MaxNetInvested': f"{strat.max_net_invested:.2f}",  # 最大净投入
         'FinalNetInvested': f"{strat.net_invested:.2f}",  # 末期净投入
         'FinalValue': f"{final_value:.2f}",  # 末期市值
-        # 其他回测结果
-        'TotalInvested': f"{strat.total_invested:.2f}",
+        'FinalNetProfit': f"{final_net_profit:.2f}",  # 末期净收益
+        # 收益率指标
         'ActualReturnPct': f"{actual_return:.2f}",
         'IRR_Pct': f"{irr:.2f}",
         'BuyAndHoldReturnPct': f"{buy_and_hold_return*100:.2f}" if buy_and_hold_return else 'N/A',
@@ -265,8 +267,8 @@ def update_summary(summary_data, run_timestamp, folder_name):
     header = [
         'StockCode', 'Strategy', 'StartDate', 'EndDate',
         'InitialPositionRatio', 'GridBuyPercent', 'GridSellPercent', 'TradePercent',
-        'InitialCash', 'MaxNetInvested', 'FinalNetInvested', 'FinalValue',
-        'TotalInvested', 'ActualReturnPct', 'IRR_Pct',
+        'InitialCash', 'MaxNetInvested', 'FinalNetInvested', 'FinalValue', 'FinalNetProfit',
+        'ActualReturnPct', 'IRR_Pct',
         'BuyAndHoldReturnPct', 'BenchmarkReturnPct', 'TotalTrades',
         'RunTimestamp', 'ResultFolder'
     ]
