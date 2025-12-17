@@ -18,11 +18,11 @@ class GridTradingParams:
     initial_position_ratio = 0.5  # 50%初始仓位
     
     # 网格参数
-    grid_buy_percent = 0.01   # 下跌1%买入
-    grid_sell_percent = 0.01  # 上涨1%卖出
+    grid_buy_percent = 0.05   # 下跌5%买入
+    grid_sell_percent = 0.05  # 上涨5%卖出
     
     # 每次交易的资金比例
-    trade_percent = 0.02  # 每次买入或卖出使用2%的可用资金
+    trade_percent = 0.1  # 每次买入或卖出使用10%的可用资金
     
     # 最大仓位比例
     max_position_ratio = 0.9  # 最多使用90%的资金
