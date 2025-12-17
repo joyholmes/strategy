@@ -236,11 +236,13 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_an
         'GridBuyPercent': f"{config.GridTradingParams.grid_buy_percent:.2f}",
         'GridSellPercent': f"{config.GridTradingParams.grid_sell_percent:.2f}",
         'TradePercent': f"{config.GridTradingParams.trade_percent:.2f}",
-        # 回测结果
-        'TotalInitial': f"{strat.initial_cash:.2f}",
+        # 资金指标
+        'InitialCash': f"{strat.initial_cash:.2f}",  # 初始投入
+        'MaxNetInvested': f"{strat.max_net_invested:.2f}",  # 最大净投入
+        'FinalNetInvested': f"{strat.net_invested:.2f}",  # 末期净投入
+        'FinalValue': f"{final_value:.2f}",  # 末期市值
+        # 其他回测结果
         'TotalInvested': f"{strat.total_invested:.2f}",
-        'TotalNetInvested': f"{strat.net_invested:.2f}",
-        'TotalFinalValue': f"{final_value:.2f}",
         'ActualReturnPct': f"{actual_return:.2f}",
         'IRR_Pct': f"{irr:.2f}",
         'BuyAndHoldReturnPct': f"{buy_and_hold_return*100:.2f}" if buy_and_hold_return else 'N/A',
@@ -263,8 +265,8 @@ def update_summary(summary_data, run_timestamp, folder_name):
     header = [
         'StockCode', 'Strategy', 'StartDate', 'EndDate',
         'InitialPositionRatio', 'GridBuyPercent', 'GridSellPercent', 'TradePercent',
-        'TotalInitial', 'TotalInvested', 'TotalNetInvested', 'TotalFinalValue', 
-        'ActualReturnPct', 'IRR_Pct',
+        'InitialCash', 'MaxNetInvested', 'FinalNetInvested', 'FinalValue',
+        'TotalInvested', 'ActualReturnPct', 'IRR_Pct',
         'BuyAndHoldReturnPct', 'BenchmarkReturnPct', 'TotalTrades',
         'RunTimestamp', 'ResultFolder'
     ]

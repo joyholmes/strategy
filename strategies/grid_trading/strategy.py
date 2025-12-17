@@ -26,6 +26,7 @@ class GridTradingStrategy(bt.Strategy):
         self.position_size = 0  # 持仓数量
         self.total_invested = 0  # 累计投入
         self.net_invested = 0  # 净投入
+        self.max_net_invested = 0  # 最大净投入
         self.last_price = 0  # 上次交易价格
         self.initial_cash = GridTradingParams.total_initial_cash
         self.buy_count = 0
@@ -139,6 +140,7 @@ class GridTradingStrategy(bt.Strategy):
         self.position_size = shares
         self.total_invested = actual_cost
         self.net_invested = actual_cost
+        self.max_net_invested = actual_cost  # 初始建仓时设置最大净投入
         self.last_price = price
         self.max_value = actual_cost
         
@@ -187,6 +189,11 @@ class GridTradingStrategy(bt.Strategy):
         self.position_size += shares_to_buy
         self.total_invested += actual_cost
         self.net_invested += actual_cost
+        
+        # 更新最大净投入
+        if self.net_invested > self.max_net_invested:
+            self.max_net_invested = self.net_invested
+        
         self.last_price = price
         
         # 记录现金流
