@@ -11,6 +11,131 @@ from strategies.grid_trading import config
 from config import global_config
 import datetime
 import csv
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.font_manager import FontProperties
+
+# 设置中文字体
+plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
+
+
+def generate_visualization(output_folder, data):
+    """
+    生成可视化图表
+    
+    参数:
+        output_folder: 输出文件夹
+        data: 原始价格数据
+    """
+    # 读取操作日志
+    op_log_path = os.path.join(output_folder, 'operation_log.csv')
+    details_path = os.path.join(output_folder, 'details.csv')
+    
+    if not os.path.exists(op_log_path) or not os.path.exists(details_path):
+        print("警告: 无法找到日志文件，跳过可视化")
+        return
+    
+    # 读取数据
+    op_log = pd.read_csv(op_log_path)
+    details = pd.read_csv(details_path)
+    
+    # 转换日期
+    op_log['日期'] = pd.to_datetime(op_log['日期'])
+    details['日期'] = pd.to_datetime(details['日期'])
+    
+    # 创建图表
+    fig, axes = plt.subplots(3, 1, figsize=(16, 12))
+    fig.suptitle('网格交易策略回测可视化', fontsize=16, fontweight='bold')
+    
+    # ========== 图1: 价格走势 + 买卖点 ==========
+    ax1 = axes[0]
+    
+    # 绘制价格线
+    ax1.plot(details['日期'], details['当前价格'], label='价格走势', color='#2E86AB', linewidth=1.5, alpha=0.8)
+    
+    # 标记买入点
+    buy_points = op_log[op_log['操作类型'].isin(['初始建仓', '网格买入'])]
+    if not buy_points.empty:
+        ax1.scatter(buy_points['日期'], buy_points['成交价格'], 
+                   color='#06D6A0', marker='^', s=100, label='买入', zorder=5, edgecolors='white', linewidths=1.5)
+    
+    # 标记卖出点
+    sell_points = op_log[op_log['操作类型'] == '网格卖出']
+    if not sell_points.empty:
+        ax1.scatter(sell_points['日期'], sell_points['成交价格'], 
+                   color='#EF476F', marker='v', s=100, label='卖出', zorder=5, edgecolors='white', linewidths=1.5)
+    
+    ax1.set_title('价格走势与买卖点', fontsize=14, fontweight='bold', pad=15)
+    ax1.set_xlabel('日期', fontsize=12)
+    ax1.set_ylabel('价格 (元)', fontsize=12)
+    ax1.legend(loc='best', fontsize=10, framealpha=0.9)
+    ax1.grid(True, alpha=0.3, linestyle='--')
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    
+    # ========== 图2: 资金走势 ==========
+    ax2 = axes[1]
+    
+    # 清理数据（移除百分号并转换为数值）
+    details['净投入_数值'] = details['净投入'].astype(str).str.replace(',', '').astype(float)
+    details['当前市值_数值'] = details['当前市值'].astype(str).str.replace(',', '').astype(float)
+    
+    # 计算总资产（净投入 + 持仓市值）
+    # 注意：这里的总资产 = 当前市值（因为净投入已经体现在持仓中）
+    details['总资产'] = details['当前市值_数值']
+    
+    # 绘制资金曲线
+    ax2.plot(details['日期'], details['净投入_数值'], label='净投入', color='#118AB2', linewidth=2, alpha=0.7)
+    ax2.plot(details['日期'], details['总资产'], label='总资产（持仓市值）', color='#06D6A0', linewidth=2, alpha=0.8)
+    
+    # 填充区域
+    ax2.fill_between(details['日期'], details['净投入_数值'], details['总资产'], 
+                     where=(details['总资产'] >= details['净投入_数值']), 
+                     interpolate=True, alpha=0.2, color='#06D6A0', label='盈利区域')
+    ax2.fill_between(details['日期'], details['净投入_数值'], details['总资产'], 
+                     where=(details['总资产'] < details['净投入_数值']), 
+                     interpolate=True, alpha=0.2, color='#EF476F', label='亏损区域')
+    
+    ax2.set_title('资金走势', fontsize=14, fontweight='bold', pad=15)
+    ax2.set_xlabel('日期', fontsize=12)
+    ax2.set_ylabel('金额 (元)', fontsize=12)
+    ax2.legend(loc='best', fontsize=10, framealpha=0.9)
+    ax2.grid(True, alpha=0.3, linestyle='--')
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    
+    # ========== 图3: 回撤曲线 ==========
+    ax3 = axes[2]
+    
+    # 清理回撤数据
+    details['最大回撤_数值'] = details['最大回撤'].astype(str).str.replace('%', '').astype(float)
+    
+    # 绘制回撤曲线
+    ax3.fill_between(details['日期'], 0, -details['最大回撤_数值'], 
+                     color='#EF476F', alpha=0.3)
+    ax3.plot(details['日期'], -details['最大回撤_数值'], 
+            color='#EF476F', linewidth=2, label='回撤')
+    
+    ax3.set_title('最大回撤', fontsize=14, fontweight='bold', pad=15)
+    ax3.set_xlabel('日期', fontsize=12)
+    ax3.set_ylabel('回撤 (%)', fontsize=12)
+    ax3.legend(loc='best', fontsize=10, framealpha=0.9)
+    ax3.grid(True, alpha=0.3, linestyle='--')
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    plt.setp(ax3.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    ax3.axhline(y=0, color='black', linestyle='-', linewidth=0.8, alpha=0.5)
+    
+    # 调整布局
+    plt.tight_layout()
+    
+    # 保存图表
+    plot_path = os.path.join(output_folder, 'backtest_plot.png')
+    plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+    print(f"\n可视化图表已保存至: {plot_path}")
+    
+    plt.close()
 
 
 def generate_report(cerebro, strat, output_folder, benchmark_return=None, buy_and_hold_return=None):
@@ -203,6 +328,10 @@ if __name__ == '__main__':
     # 生成报告
     summary_data = generate_report(cerebro, strat, output_folder, benchmark_return, buy_and_hold_return)
     
+    # 生成可视化图表
+    print("\n正在生成可视化图表...")
+    generate_visualization(output_folder, data)
+    
     # 更新汇总文件
     update_summary(summary_data, run_timestamp, folder_name)
     
@@ -210,3 +339,4 @@ if __name__ == '__main__':
     print(f"  - backtest_results.txt  (总结报告)")
     print(f"  - operation_log.csv     (操作日志)")
     print(f"  - details.csv           (每日详情)")
+    print(f"  - backtest_plot.png     (可视化图表)")
