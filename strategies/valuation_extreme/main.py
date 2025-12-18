@@ -133,15 +133,16 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, fetch_
     full_val_series = pd.Series(full_valuation_history)
     pe_stats = full_val_series.describe()
     
-    # 时间周期计算
-    total_days = len(strat)
-    years = total_days / 365.0
+    # 实际回测日期 (details.csv 里的第一天和最后一天)
+    actual_start = pd.to_datetime(df['日期'].iloc[0])
+    actual_end = pd.to_datetime(df['日期'].iloc[-1])
+
+    # 时长计算 (使用自然日)
+    days_diff = (actual_end - actual_start).days
+    years = days_diff / 365.25
+    
     total_return = (final_value - initial_cash) / initial_cash
     annual_return = (1 + total_return) ** (1 / years) - 1 if years > 0.1 else 0
-    
-    # 实际回测日期 (details.csv 里的第一天和最后一天)
-    actual_start = df['日期'].iloc[0]
-    actual_end = df['日期'].iloc[-1]
 
     lines = []
     lines.append("=" * 60)

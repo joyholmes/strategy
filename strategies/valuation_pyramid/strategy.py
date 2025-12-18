@@ -146,16 +146,19 @@ class ValuationStrategy(bt.Strategy):
                     max_target_pos = target
         
         # 3. 获取当前实际仓位状态 (0.0 ~ 1.0)
-        # 注意: 这里使用 self.target_position_size 作为逻辑状态记录，
-        # 而不是 broker.getposition，以避免因价格波动导致的市值变化干扰逻辑判断
-        # (例如：想要保持50%，但因为涨了变成了55%，如果不调仓，逻辑上还是认为是"50%档位")
-        # 但为了更稳健，我们还是看实际持仓比例，允许一定误差？
-        # 不，对于"不操作"区间，我们应该维持的是 share 数量不变，还是 value 比例不变？
-        # 通常估值策略是 value based。
-        # 这里为了简单，我们比较"当前的逻辑目标"。
+        # 核心修复: 必须与实际仓位进行校准，防止因订单失败导致的"逻辑满仓、实际空仓"
+        value = self.broker.get_value()
+        cash = self.broker.get_cash()
+        actual_pos_percent = (value - cash) / value if value > 0 else 0
         
+        # 如果逻辑目标与实际持仓偏差超过 5%，则重置逻辑目标为实际值
+        # 这种情况通常发生在资金不足导致买入失败，或者分红导致净值变化
+        if abs(self.target_position_size - actual_pos_percent) > 0.05:
+            # print(f"DEBUG {current_date_dt}: 校准仓位。逻辑{self.target_position_size:.2f} -> 实际{actual_pos_percent:.2f}")
+            self.target_position_size = actual_pos_percent
+
         # 决策生成
-        current_logical_pos = self.target_position_size # 上一次设定的目标
+        current_logical_pos = self.target_position_size 
         final_target_pos = current_logical_pos
         
         signal = "-"

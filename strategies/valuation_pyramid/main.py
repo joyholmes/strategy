@@ -28,6 +28,7 @@ def generate_visualization(output_folder):
     
     if not os.path.exists(details_path): return
     df = pd.read_csv(details_path)
+    if df.empty: return
     df['日期'] = pd.to_datetime(df['日期'])
     
     op_log = pd.DataFrame()
@@ -100,27 +101,35 @@ def generate_report(cerebro, strat, output_folder, benchmark_return, fetch_start
     # 统计数据读取
     details_path = os.path.join(output_folder, 'details.csv')
     df = pd.read_csv(details_path)
-    
+    if df.empty:
+        print(f"警告: 回测详情为空 (可能因为没有交易发生或数据获取失败)。无法生成详细报告。")
+        return
+
     # 估值分布统计源 (关键：确定分位点计算的标尺数据)
-    if strat.ref_history_vals is not None:
+    if strat.ref_history_vals is not None and len(strat.ref_history_vals) > 0:
         full_vals = strat.ref_history_vals
         dist_source = "固定历史参考区间"
     else:
         # 如果是滚动窗口，使用全量数据近似展示
         full_vals = [x for x in list(strat.valuation_data.array) if x > 0 and not np.isnan(x)]
         dist_source = "滚动历史窗口"
-        
-    val_series = pd.Series(full_vals)
-    val_stats = val_series.describe()
     
-    # 时间周期与收益计算
-    total_days = len(strat)
-    years = total_days / 365.0
+    if len(full_vals) == 0:
+        print("警告: 未获取到有效的估值数据，无法计算统计分布。")
+        val_stats = {'min': 0, 'mean': 0, 'max': 0}
+    else:
+        val_series = pd.Series(full_vals)
+        val_stats = val_series.describe()
+    
+    actual_start = pd.to_datetime(df['日期'].iloc[0])
+    actual_end = pd.to_datetime(df['日期'].iloc[-1])
+    
+    # 时长计算 (使用自然日)
+    days_diff = (actual_end - actual_start).days
+    years = days_diff / 365.25
+    
     total_return = (final_value - initial_cash) / initial_cash
     annual_return = (1 + total_return) ** (1 / years) - 1 if years > 0.1 else 0
-    
-    actual_start = df['日期'].iloc[0]
-    actual_end = df['日期'].iloc[-1]
     
     abs_profit = final_value - initial_cash
     

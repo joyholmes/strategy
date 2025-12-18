@@ -5,7 +5,7 @@
 TUSHARE_TOKEN = '36c643f995ba9828b822f1872dda95372f89787eb912dad38c3b0375'
 
 # 数据源配置
-DATA_SOURCE = 'akshare'  # 'tushare' or 'akshare' or 'baostock'
+DATA_SOURCE = 'baostock'  # 'tushare' or 'akshare' or 'baostock'
 
 # 通用回测配置
 ENABLE_BENCHMARK = True  # 是否启用基准对比
