@@ -89,9 +89,11 @@ def _fetch_from_baostock(stock_code, start_date, end_date):
     start_date_bs = datetime.strptime(start_date, '%Y%m%d').strftime('%Y-%m-%d')
     end_date_bs = datetime.strptime(end_date, '%Y%m%d').strftime('%Y-%m-%d')
 
+    # Try to fetch additional valuation metrics
+    # Note: Index data in Baostock usually doesn't have peTTM/pbMRQ, will return empty for those fields
     rs = bs.query_history_k_data_plus(
         bs_stock_code,
-        "date,open,high,low,close,volume",
+        "date,open,high,low,close,volume,peTTM,pbMRQ",
         start_date=start_date_bs,
         end_date=end_date_bs,
         frequency="d",
@@ -116,6 +118,12 @@ def _fetch_from_baostock(stock_code, start_date, end_date):
     for col in ['open', 'high', 'low', 'close', 'volume']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
     
+    # Handle PE/PB if they exist (they might be empty strings or zeros)
+    if 'peTTM' in df.columns:
+        df['pe'] = pd.to_numeric(df['peTTM'], errors='coerce')
+    if 'pbMRQ' in df.columns:
+        df['pb'] = pd.to_numeric(df['pbMRQ'], errors='coerce')
+    
     df.index = pd.to_datetime(df.date)
     df = df.sort_index()
     return df
@@ -136,7 +144,14 @@ def fetch_data(stock_code, start_date, end_date):
 
     # Prepare data for backtrader
     df['openinterest'] = 0
-    return pd.DataFrame(df, columns=['open', 'high', 'low', 'close', 'volume', 'openinterest'])
+    
+    # Ensure pe/pb columns exist, fill with NaN if missing
+    if 'pe' not in df.columns:
+        df['pe'] = float('nan')
+    if 'pb' not in df.columns:
+        df['pb'] = float('nan')
+        
+    return pd.DataFrame(df, columns=['open', 'high', 'low', 'close', 'volume', 'openinterest', 'pe', 'pb'])
 
 if __name__ == '__main__':
     # Example usage
