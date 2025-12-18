@@ -1,9 +1,9 @@
 from config import global_config
 
 # 默认回测标的
-# 注意: Baostock数据源仅提供个股的PE/PB数据，不提供指数估值数据
-# 如果回测指数(如000300.SH)，请切换到Tushare或Akshare，或者使用个股代码(如600036.SH)进行测试
-STOCK_CODE = '600036.SH' # 招商银行 (示例个股)
+# 注意: 已验证Akshare支持000300.SH等主要指数的PE/PB估值数据 (Tushare也支持)
+# Baostock 仅支持个股估值
+STOCK_CODE = '000300.SH' # 沪深300
 START_DATE = '20200101'
 END_DATE = '20251201'
 

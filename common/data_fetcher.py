@@ -73,6 +73,40 @@ def _fetch_from_akshare(stock_code, start_date, end_date):
     df = df.rename(columns={'日期': 'trade_date', '开盘': 'open', '最高': 'high', '最低': 'low', '收盘': 'close', '成交量': 'volume'})
     df.index = pd.to_datetime(df.trade_date)
     df = df.sort_index()
+
+    # 尝试获取估值数据 (仅针对指数)
+    # 乐咕接口需要中文名，这里做简单映射
+    index_map = {
+        '000300': '沪深300',
+        '399006': '创业板指',
+        '000905': '中证500',
+        '000016': '上证50',
+    }
+    
+    if ak_stock_code in index_map:
+        try:
+            name = index_map[ak_stock_code]
+            
+            # 获取PE (滚动市盈率)
+            pe_df = ak.stock_index_pe_lg(symbol=name)
+            pe_df['trade_date'] = pd.to_datetime(pe_df['日期'])
+            pe_df = pe_df.set_index('trade_date')
+            
+            # 获取PB (市净率)
+            pb_df = ak.stock_index_pb_lg(symbol=name)
+            pb_df['trade_date'] = pd.to_datetime(pb_df['日期'])
+            pb_df = pb_df.set_index('trade_date')
+            
+            # 合并数据 (利用索引自动对齐)
+            # 注意：估值数据可能比K线数据长或短，pandas会自动处理
+            if '滚动市盈率' in pe_df.columns:
+                df['pe'] = pe_df['滚动市盈率']
+            if '市净率' in pb_df.columns:
+                df['pb'] = pb_df['市净率']
+                
+        except Exception as e:
+            print(f"Warning: Failed to fetch Akshare valuation data for {name}: {e}")
+
     return df
 
 def _fetch_from_baostock(stock_code, start_date, end_date):
