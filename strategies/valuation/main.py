@@ -12,6 +12,7 @@ from config import global_config
 import datetime
 import csv
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
@@ -106,10 +107,9 @@ def generate_visualization(output_folder):
     plt.savefig(os.path.join(output_folder, 'valuation_plot.png'))
     plt.close()
 
-def generate_report(cerebro, strat, output_folder, benchmark_return=None):
+def generate_report(cerebro, strat, output_folder, benchmark_return=None, fetch_start_date=None, trading_start_date=None):
     final_value = cerebro.broker.get_value()
     initial_cash = strat.p.total_initial_cash
-    net_profit = final_value - strat.net_invested
     
     # 获取分析器结果
     drawdown_info = strat.analyzers.drawdown.get_analysis()
@@ -119,39 +119,83 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None):
     sharpe_ratio = sharpe_info.get('sharperatio', 0)
     if sharpe_ratio is None: sharpe_ratio = 0
     
-    # 计算估值统计
-    # 注意：这里需要重新读取csv来获取完整的估值数据，因为strat对象里只保留了部分
+    # 读取回测详情数据 (包含回测期间的每日记录)
     details_path = os.path.join(output_folder, 'details.csv')
     df = pd.read_csv(details_path)
-    pe_stats = df['估值指标'].describe()
+    
+    # 为了计算全局的PE分位点对应值，我们需要尽可能多的历史数据
+    # 这里我们使用 strat.valuation_data (包含预载数据) 来计算统计概况
+    # 注意：strat.valuation_data 是一个LineBuffer，转为list
+    full_valuation_history = list(strat.valuation_data.array)
+    # 过滤掉无效值 (0 或 NaN)
+    full_valuation_history = [x for x in full_valuation_history if x > 0 and not np.isnan(x)]
+    full_val_series = pd.Series(full_valuation_history)
+    pe_stats = full_val_series.describe()
     
     # 时间周期计算
     total_days = len(strat)
     years = total_days / 365.0
     total_return = (final_value - initial_cash) / initial_cash
     annual_return = (1 + total_return) ** (1 / years) - 1 if years > 0.1 else 0
+    
+    # 实际回测日期 (details.csv 里的第一天和最后一天)
+    actual_start = df['日期'].iloc[0]
+    actual_end = df['日期'].iloc[-1]
 
     lines = []
     lines.append("=" * 60)
     lines.append(f"估值策略回测报告 - {config.STOCK_CODE}")
     lines.append("=" * 60)
     
-    lines.append("\n[基本信息]")
+    lines.append("\n[数据说明]")
     lines.append(f"回测标的: {config.STOCK_CODE}")
     lines.append(f"策略指标: {config.ValuationParams.metric.upper()}")
-    # 获取实际回测日期范围
-    start_date = df['日期'].iloc[0]
-    end_date = df['日期'].iloc[-1]
-    lines.append(f"回测周期: {start_date} 至 {end_date}")
-    lines.append(f"持续时间: {total_days} 天 ({years:.2f} 年)")
-    lines.append(f"数据预载: {config.ValuationParams.lookback_years} 年 (用于消除冷启动波动)")
+    lines.append(f"数据预载区间: {fetch_start_date} 至 {actual_start} (前)")
+    lines.append(f"  - 用于积累足够的历史样本，确保策略启动时分位点计算准确。")
+    lines.append(f"策略执行区间: {actual_start} 至 {actual_end}")
+    lines.append(f"  - 实际进行交易回测的时间段。")
+    lines.append(f"数据总跨度: {len(full_valuation_history)} 个交易日 (约 {len(full_valuation_history)/252:.1f} 年)")
+
+    lines.append("\n[策略标准核实]")
+    lines.append("1. 估值分位点与仓位映射表 (Config配置):")
+    lines.append(f"   {'分位点区间':<15} | {'目标仓位':<10}")
+    lines.append("   " + "-"*30)
+    
+    # 打印配置的 tiers
+    tiers = config.ValuationParams.position_tiers
+    prev_limit = 0.0
+    for limit, pos in tiers:
+        lines.append(f"   {prev_limit*100:>3.0f}% - {limit*100:>3.0f}%      | {pos*100:>3.0f}%")
+        prev_limit = limit
+        
+    lines.append("\n2. 指标绝对值参考 (基于全历史数据统计):")
+    lines.append("   用户设定的分位点阈值 -> 对应的实际PE/PB值")
+    lines.append(f"   {'分位点':<10} | {'估值指标绝对值':<15}")
+    lines.append("   " + "-"*30)
+    
+    # 计算关键分位点对应的绝对值
+    thresholds = [t[0] for t in tiers] # 获取所有阈值 [0.2, 0.4, 0.6, 0.8, 1.0]
+    # 去重并排序
+    thresholds = sorted(list(set(thresholds)))
+    if 1.0 in thresholds: thresholds.remove(1.0)
+    
+    # 使用 numpy 计算分位数
+    val_percentiles = np.percentile(full_valuation_history, [t * 100 for t in thresholds])
+    
+    for t, val in zip(thresholds, val_percentiles):
+        lines.append(f"   {t*100:>3.0f}%       | {val:.4f}")
+        
+    lines.append("\n   统计概况:")
+    lines.append(f"   最低值: {pe_stats['min']:.2f}")
+    lines.append(f"   平均值: {pe_stats['mean']:.2f}")
+    lines.append(f"   最高值: {pe_stats['max']:.2f}")
+    lines.append(f"   当前值: {full_valuation_history[-1]:.2f}")
 
     lines.append("\n[资金表现]")
     lines.append(f"初始资金: {initial_cash:,.2f}")
     lines.append(f"期末资产: {final_value:,.2f}")
     lines.append(f"最大净投入: {strat.max_net_invested:,.2f}")
     lines.append(f"期末净投入: {strat.net_invested:,.2f}")
-    # 净收益建议用绝对增值
     abs_profit = final_value - initial_cash
     lines.append(f"累计净利: {abs_profit:,.2f}") 
     lines.append(f"总收益率: {total_return:.2%}")
@@ -162,20 +206,10 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None):
     lines.append("\n[基准对比 (买入持有)]")
     lines.append(f"基准收益: {benchmark_return:.2%}")
     lines.append(f"超额收益: {total_return - benchmark_return:.2%}")
-    lines.append("(注: 基准收益 = (期末价 - 期初价) / 期初价)")
-
-    lines.append("\n[估值统计]")
-    lines.append(f"指标类型: {config.ValuationParams.metric.upper()}")
-    lines.append(f"区间最高: {pe_stats['max']:.2f}")
-    lines.append(f"区间最低: {pe_stats['min']:.2f}")
-    lines.append(f"区间平均: {pe_stats['mean']:.2f}")
-    lines.append(f"期末数值: {df['估值指标'].iloc[-1]:.2f}")
-    lines.append(f"期末分位: {df['估值分位点'].iloc[-1]:.2%}")
 
     lines.append("\n[交易统计]")
     lines.append(f"总交易次数: {strat.total_trades}")
     
-    # 尝试获取TradeAnalyzer详细数据
     trade_info = strat.analyzers.trades.get_analysis()
     if 'total' in trade_info and trade_info.total.closed > 0:
         total_closed = trade_info.total.closed
@@ -276,6 +310,11 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"基准收益计算出错: {e}")
 
-    generate_report(cerebro, strat, output_folder, benchmark_return)
+    # 生成报告，传入更多上下文信息
+    generate_report(cerebro, strat, output_folder, 
+                   benchmark_return=benchmark_return,
+                   fetch_start_date=fetch_start_date,
+                   trading_start_date=config.START_DATE)
+                   
     generate_visualization(output_folder)
     print(f"\n结果已保存至: {output_folder}")
