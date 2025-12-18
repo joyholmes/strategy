@@ -20,6 +20,7 @@ class ValuationStrategy(bt.Strategy):
         ('metric', ValuationParams.metric),
         ('lookback_years', ValuationParams.lookback_years),
         ('position_tiers', ValuationParams.position_tiers),
+        ('trade_start_date', None), # 开始交易日期，早于此日期的只计算不交易
         ('output_folder', None),
     )
     
@@ -29,6 +30,7 @@ class ValuationStrategy(bt.Strategy):
         self.datapb = self.datas[0].pb
         
         self.order = None
+        self.target_position_size = 0.0
         
         # 统计数据
         self.net_invested = 0
@@ -41,7 +43,13 @@ class ValuationStrategy(bt.Strategy):
             self.valuation_data = self.datape
         else:
             self.valuation_data = self.datapb
-            
+        
+        # 转换 trade_start_date
+        self.trade_start_dt = None
+        if self.p.trade_start_date:
+            import datetime
+            self.trade_start_dt = datetime.datetime.strptime(self.p.trade_start_date, '%Y%m%d').date()
+
         # 准备日志
         if self.p.output_folder:
             log_path = os.path.join(self.p.output_folder, 'operation_log.csv')
@@ -59,7 +67,7 @@ class ValuationStrategy(bt.Strategy):
                 '日期', '收盘价', '估值指标', '估值分位点', '持仓市值', 
                 '现金', '总资产', '仓位比例', '目标仓位'
             ])
-        
+
     def stop(self):
         if hasattr(self, 'op_log_file'):
             self.op_log_file.close()
@@ -101,7 +109,7 @@ class ValuationStrategy(bt.Strategy):
             self.log("订单取消/拒绝")
             
         self.order = None
-        
+
     def next(self):
         # 检查估值数据是否存在
         current_val = self.valuation_data[0]
@@ -109,14 +117,11 @@ class ValuationStrategy(bt.Strategy):
             return
 
         # 获取历史数据用于计算分位点
-        # Backtrader获取历史数据: self.valuation_data.get(ago=0, size=lookback_days)
-        # 简单估算：lookback_years * 252
         lookback_days = int(self.p.lookback_years * 252)
         
         # 确保有足够的数据计算分位点
+        # 现在有了预加载数据，我们可以总是尝试获取 adequate history
         if len(self) < lookback_days:
-            # 数据不足时，可以使用至今为止的所有数据，或者不操作
-            # 这里选择使用至今所有数据
             history_data = self.valuation_data.get(ago=0, size=len(self))
         else:
             history_data = self.valuation_data.get(ago=0, size=lookback_days)
@@ -127,7 +132,6 @@ class ValuationStrategy(bt.Strategy):
             return
             
         # 计算分位点 (Percentile Rank)
-        # 使用 scipy.stats.percentileofscore 或者简单的 numpy 统计
         self.current_percentile = (np.array(history_vals) < current_val).mean()
         
         # 确定目标仓位
@@ -139,8 +143,14 @@ class ValuationStrategy(bt.Strategy):
         
         self.target_position_size = target_pos # 记录一下用于日志
         
+        # 判断是否到达交易开始时间
+        current_date = self.datas[0].datetime.date(0)
+        
+        # 如果还没到正式开始日期（预热期），不执行任何交易，且不记录详情（或者记录但不交易）
+        if self.trade_start_dt and current_date < self.trade_start_dt:
+            return
+        
         # 执行调仓
-        # order_target_percent 会自动计算需要买卖的数量
         self.order_target_percent(target=target_pos)
         
         # 记录每日详情

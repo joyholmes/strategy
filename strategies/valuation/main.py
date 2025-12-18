@@ -104,12 +104,17 @@ if __name__ == '__main__':
     output_folder = os.path.join('results', f'{config.STOCK_CODE}-Valuation-{config.START_DATE}-{config.END_DATE}-{run_timestamp}')
     os.makedirs(output_folder, exist_ok=True)
     
-    cerebro.addstrategy(ValuationStrategy, output_folder=output_folder)
-    
     # 获取数据
     print(f"获取数据: {config.STOCK_CODE}")
     try:
-        data = fetch_data(config.STOCK_CODE, config.START_DATE, config.END_DATE)
+        # 为了解决分位点计算的冷启动问题，我们需要预载历史数据
+        # 比如往前多取 lookback_years (默认5年) 的数据
+        fetch_start_date = (datetime.datetime.strptime(config.START_DATE, '%Y%m%d') - 
+                           datetime.timedelta(days=int(config.ValuationParams.lookback_years * 365 + 30))).strftime('%Y%m%d')
+        print(f"  - 数据预加载起始日期: {fetch_start_date} (用于计算历史分位点)")
+        print(f"  - 策略交易起始日期: {config.START_DATE}")
+
+        data = fetch_data(config.STOCK_CODE, fetch_start_date, config.END_DATE)
         
         # 检查是否有估值数据
         if data['pe'].isnull().all() and data['pb'].isnull().all():
@@ -120,6 +125,17 @@ if __name__ == '__main__':
         # 转换为自定义DataFeed
         feed = ValuationPandasData(dataname=data, name=config.STOCK_CODE)
         cerebro.adddata(feed)
+        
+        # 传入实际交易开始日期给策略，用于过滤
+        cerebro.addstrategy(ValuationStrategy, 
+                          output_folder=output_folder,
+                          trade_start_date=config.START_DATE)
+        
+        # 移除之前的 addstrategy 调用
+        
+    except Exception as e:
+        print(f"数据获取失败: {e}")
+        sys.exit(1)
     except Exception as e:
         print(f"数据获取失败: {e}")
         sys.exit(1)
