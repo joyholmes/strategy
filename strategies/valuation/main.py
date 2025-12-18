@@ -210,15 +210,46 @@ def generate_report(cerebro, strat, output_folder, benchmark_return=None, fetch_
     lines.append("\n[交易统计]")
     lines.append(f"总交易次数: {strat.total_trades}")
     
+    # 尝试获取TradeAnalyzer详细数据
     trade_info = strat.analyzers.trades.get_analysis()
-    if 'total' in trade_info and trade_info.total.closed > 0:
+    
+    # AutoDict 兼容性处理: 使用 try-except 最为稳妥
+    total_closed = 0
+    won_total = 0
+    lost_total = 0
+    
+    try:
+        # 尝试属性访问
         total_closed = trade_info.total.closed
-        won_total = trade_info.won.total
-        lost_total = trade_info.lost.total
+    except (AttributeError, KeyError):
+        try:
+            # 尝试字典访问
+            total_closed = trade_info['total']['closed']
+        except (KeyError, TypeError):
+            total_closed = 0
+            
+    if total_closed > 0:
+        try:
+            won_total = trade_info.won.total
+        except (AttributeError, KeyError):
+            try:
+                won_total = trade_info['won']['total']
+            except (KeyError, TypeError):
+                won_total = 0
+                
+        try:
+            lost_total = trade_info.lost.total
+        except (AttributeError, KeyError):
+            try:
+                lost_total = trade_info['lost']['total']
+            except (KeyError, TypeError):
+                lost_total = 0
+        
         lines.append(f"  - 完成回合: {total_closed}")
         lines.append(f"  - 盈利回合: {won_total}")
         lines.append(f"  - 亏损回合: {lost_total}")
-        win_rate = won_total / total_closed
+        
+        win_rate = won_total / total_closed if total_closed > 0 else 0
         lines.append(f"  - 胜率: {win_rate:.2%}")
     else:
         lines.append("  - (无已平仓交易统计)")
