@@ -18,6 +18,7 @@ class ValuationStrategy(bt.Strategy):
         ('lookback_years', ValuationParams.lookback_years),
         ('buy_tiers', ValuationParams.buy_tiers),
         ('sell_tiers', ValuationParams.sell_tiers),
+        ('reference_values', None), # 固定的历史参考数据 (列表或数组)
         ('trade_start_date', None),
         ('output_folder', None),
     )
@@ -41,6 +42,15 @@ class ValuationStrategy(bt.Strategy):
             self.valuation_data = self.datape
         else:
             self.valuation_data = self.datapb
+            
+        # 预处理参考数据 (转为 numpy array 以加速计算)
+        self.ref_history_vals = None
+        if self.p.reference_values and len(self.p.reference_values) > 0:
+            self.ref_history_vals = np.array([x for x in self.p.reference_values if not np.isnan(x) and x > 0])
+            print(f"策略已加载固定参考区间数据: {len(self.ref_history_vals)} 条记录")
+            # 计算参考区间的统计信息供日志使用
+            print(f"  - 参考区间均值: {self.ref_history_vals.mean():.2f}")
+            print(f"  - 参考区间中位数: {np.median(self.ref_history_vals):.2f}")
         
         # 日期处理
         self.trade_start_dt = None
@@ -101,14 +111,20 @@ class ValuationStrategy(bt.Strategy):
         if self.trade_start_dt and current_date_dt < self.trade_start_dt: return
 
         # 计算分位点
-        count = len(self)
-        try:
-            history_data = self.valuation_data.get(ago=0, size=count)
-            history_vals = [v for v in history_data if not np.isnan(v) and v > 0]
-        except: return
-        
-        if not history_vals: return
-        self.current_percentile = (np.array(history_vals) < current_val).mean()
+        if self.ref_history_vals is not None:
+            # 方案A: 使用固定参考系
+            # 计算当前值在参考系中的位置
+            self.current_percentile = (self.ref_history_vals < current_val).mean()
+        else:
+            # 方案B: 使用滚动窗口 (Lookback)
+            count = len(self)
+            try:
+                history_data = self.valuation_data.get(ago=0, size=count)
+                history_vals = [v for v in history_data if not np.isnan(v) and v > 0]
+            except: return
+            
+            if not history_vals: return
+            self.current_percentile = (np.array(history_vals) < current_val).mean()
         
         # === 核心策略逻辑: 双线持仓控制 ===
         
