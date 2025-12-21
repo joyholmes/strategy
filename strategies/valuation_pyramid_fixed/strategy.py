@@ -18,6 +18,8 @@ class ValuationStrategy(bt.Strategy):
         ('lookback_years', ValuationParams.lookback_years),
         ('buy_tiers', ValuationParams.buy_tiers),
         ('sell_tiers', ValuationParams.sell_tiers),
+        ('enable_fixed_investment', getattr(ValuationParams, 'enable_fixed_investment', False)),
+        ('fixed_investment_amount', getattr(ValuationParams, 'fixed_investment_amount', 0.0)),
         ('reference_values', None), # 固定的历史参考数据 (列表或数组)
         ('trade_start_date', None),
         ('output_folder', None),
@@ -34,7 +36,10 @@ class ValuationStrategy(bt.Strategy):
         # 统计变量
         self.net_invested = 0
         self.max_net_invested = 0
+        self.net_invested = 0
+        self.max_net_invested = 0
         self.total_trades = 0
+        self.total_cash_injected = 0 # 记录总注入资金
         self.current_percentile = 0
         
         # 验证指标
@@ -167,8 +172,18 @@ class ValuationStrategy(bt.Strategy):
         
         # 逻辑：如果不满足最低要求 -> 买入补足
         if current_logical_pos < min_target_pos:
+            # === 新增逻辑：触发加仓时，进行定投 (注入资金) ===
+            added_cash_msg = ""
+            if self.p.enable_fixed_investment and self.p.fixed_investment_amount > 0:
+                # 注入资金
+                self.broker.add_cash(self.p.fixed_investment_amount)
+                self.total_cash_injected += self.p.fixed_investment_amount
+                added_cash_msg = f" + 定投{self.p.fixed_investment_amount}"
+                # 注意: 注入资金后，总资产增加，下面的 order_target_percent 会自动基于新的总资产计算买入量
+                # 这符合“投入更多资金并按策略分配”的逻辑
+            
             final_target_pos = min_target_pos
-            signal = f"买入(补至{min_target_pos:.0%})"
+            signal = f"买入(补至{min_target_pos:.0%}{added_cash_msg})"
             
         # 逻辑：如果超过最高限制 -> 卖出降低
         elif current_logical_pos > max_target_pos:
