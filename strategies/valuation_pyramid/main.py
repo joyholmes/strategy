@@ -277,7 +277,7 @@ if __name__ == '__main__':
                        reference_values=reference_values)
     
     cerebro.broker.setcash(config.ValuationParams.total_initial_cash)
-    cerebro.broker.setcommission(commission=global_config.COMMISSION)
+    # cerebro.broker.setcommission(commission=global_config.COMMISSION)
     
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')

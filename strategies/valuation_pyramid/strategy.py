@@ -81,6 +81,12 @@ class ValuationStrategy(bt.Strategy):
         if order.status in [order.Submitted, order.Accepted]:
             return
         
+        # 处理订单失败的情况 (如资金不足)
+        if order.status in [order.Margin, order.Rejected, order.Canceled]:
+            self.log(f"订单未完成: 状态={order.getstatusname()} - 可能原因为资金不足(无法支付手续费)或触及跌停")
+            self.order = None
+            return
+        
         if order.status in [order.Completed]:
             self.total_trades += 1
             # 修正资金计算逻辑: 必须用 成交价 * 数量，不能用 order.executed.value (卖出时它是成本)
@@ -183,6 +189,7 @@ class ValuationStrategy(bt.Strategy):
 
         # 执行
         if final_target_pos != self.target_position_size:
+            # 既然不考虑手续费，可以直接执行目标仓位
             self.target_position_size = final_target_pos
             self.order_target_percent(target=final_target_pos)
         
