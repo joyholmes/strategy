@@ -23,3 +23,7 @@ class Config:
 
     # --- 系统设置 ---
     DATA_POLL_INTERVAL = 3                 # 数据轮询间隔(秒)
+    
+    # --- 日志设置 ---
+    LOG_DIR = "logs"
+    LOG_FILE_PREFIX = "intraday_momentum"

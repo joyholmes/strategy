@@ -38,14 +38,20 @@ class TradeManager:
                 'avg_cost': price,
                 'volume': volume,
                 'name': name,
-                'break_vwap_time': None # 首次跌破均线时间
+                'break_vwap_time': None, # 首次跌破均线时间
+                'buy_date': datetime.now().date() # 记录买入日期用于 T+1 检查
             }
         else:
             # 加仓逻辑（简化为更新成本）
+            # 注意：如果是加仓，混合了旧仓位和新仓位。为了简化 T+1，这里严格一点：
+            # 只要今天有买入，这部分新增的量 T+1 才能卖。
+            # 但为了简化模型，假设加仓后更新 buy_date 可能会导致旧仓位也被锁住（保守策略）
+            # 或者我们需要分批记录。鉴于本策略主要是单次买入，我们暂更新 buy_date 为最新，严格 T+1。
             old = self.positions[symbol]
             new_cost = (old['avg_cost'] * old['volume'] + cost) / (old['volume'] + volume)
             old['volume'] += volume
             old['avg_cost'] = new_cost
+            old['buy_date'] = datetime.now().date() # 加仓部分导致整体锁定（保守风控）
             
         print(f"[BUY] {datetime.now().strftime('%H:%M:%S')} 买入 {name}({symbol}): 价格={price}, 数量={volume}, 金额={cost:.2f}")
         return True
@@ -66,6 +72,54 @@ class TradeManager:
         
         print(f"[SELL] {datetime.now().strftime('%H:%M:%S')} 卖出 {pos['name']}({symbol}): 价格={price}, 盈亏={pnl:.2f}, 原因={reason}")
         return True
+
+    def get_account_summary(self, current_prices):
+        """
+        计算账户当前状态
+        current_prices: dict, {symbol: current_price}
+        Returns: dict
+        """
+        market_value = 0.0
+        details = []
+        today = datetime.now().date()
+        
+        for symbol, pos in self.positions.items():
+            curr_price = current_prices.get(symbol, pos['avg_cost']) # 如果取不到现价，暂按成本价算
+            mv = pos['volume'] * curr_price
+            market_value += mv
+            
+            # 单个持仓盈亏
+            profit = (curr_price - pos['avg_cost']) * pos['volume']
+            profit_pct = (curr_price - pos['avg_cost']) / pos['avg_cost']
+            
+            # 可卖状态
+            is_collectible = (pos['buy_date'] < today)
+            status_desc = "T+1锁定" if not is_collectible else "可卖"
+            
+            details.append({
+                'symbol': symbol,
+                'name': pos['name'],
+                'volume': pos['volume'],
+                'avg_cost': pos['avg_cost'],
+                'current_price': curr_price,
+                'profit': profit,
+                'profit_pct': profit_pct,
+                'break_vwap_time': pos.get('break_vwap_time'),
+                'status_desc': status_desc
+            })
+            
+        total_assets = self.available_capital + market_value
+        total_pnl = total_assets - self.total_capital
+        total_pnl_pct = total_pnl / self.total_capital
+        
+        return {
+            'total_assets': total_assets,
+            'available_capital': self.available_capital,
+            'market_value': market_value,
+            'total_pnl': total_pnl,
+            'total_pnl_pct': total_pnl_pct,
+            'positions': details
+        }
 
 class StrategyEngine:
     def __init__(self, trade_manager):
@@ -138,6 +192,8 @@ class StrategyEngine:
         holding_symbols = list(self.tm.positions.keys())
         current_data = market_data_df[market_data_df['symbol'].isin(holding_symbols)]
         
+        today = datetime.now().date()
+        
         for idx, row in current_data.iterrows():
             symbol = row['symbol']
             price = row['current_price']
@@ -146,6 +202,11 @@ class StrategyEngine:
             pre_close = row['pre_close']
             
             pos = self.tm.positions[symbol]
+            
+            # --- 0. T+1 检查 ---
+            # 如果是今天买入的，禁止卖出
+            if pos['buy_date'] >= today:
+                continue
             
             # --- 场景1: 9:24:59 集合竞价卖出 ---
             if is_auction_time:
