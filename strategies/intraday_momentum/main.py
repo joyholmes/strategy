@@ -86,6 +86,9 @@ def main():
     logging.info(f"日志文件: {log_file}")
     logging.info(f"配置: 总资金={Config.TOTAL_CAPITAL}, 量比阈值={Config.BUY_VOLUME_RATIO_THRESHOLD}")
     
+    mode_info = "全市场" if Config.MONITOR_MODE == "ALL" else f"自选股 ({len(Config.WATCHLIST)}只)"
+    logging.info(f"监控模式: {Config.MONITOR_MODE} [{mode_info}]")
+    
     trade_manager = TradeManager()
     engine = StrategyEngine(trade_manager)
     
@@ -110,6 +113,15 @@ def main():
                 start_time = time.time()
                 
                 df = DataProvider.get_realtime_quotes()
+                
+                # 如果配置为仅监控自选股，进行过滤
+                if Config.MONITOR_MODE == "WATCHLIST":
+                    if hasattr(Config, 'WATCHLIST') and Config.WATCHLIST:
+                        df = df[df['symbol'].isin(Config.WATCHLIST)]
+                    else:
+                        logging.warning("监控模式为 WATCHLIST 但列表为空，跳过处理")
+                        df = pd.DataFrame() # 空数据
+
                 
                 if not df.empty:
                     # 交易逻辑

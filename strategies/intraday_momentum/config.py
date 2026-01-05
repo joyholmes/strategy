@@ -2,6 +2,10 @@
 # 策略参数配置
 
 class Config:
+    # --- 监控范围 ---
+    MONITOR_MODE = "ALL"           # 模式: "ALL" (全市场) 或 "WATCHLIST" (仅自选)
+    WATCHLIST = ["600030", "000001"] # 自选股列表 (仅在 WATCHLIST 模式下生效)
+
     # --- 时间设置 ---
     TIME_AUCTION_CHECK = "09:24:59"
     TIME_MARKET_OPEN_CHECK = "09:35:01"
@@ -27,3 +31,4 @@ class Config:
     # --- 日志设置 ---
     LOG_DIR = "logs"
     LOG_FILE_PREFIX = "intraday_momentum"
+g
