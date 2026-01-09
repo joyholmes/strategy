@@ -93,6 +93,7 @@ def main():
     engine = StrategyEngine(trade_manager)
     
     has_checked_auction = False
+    has_loaded_sell_watch = False  # 是否已加载卖出监控持仓
     last_summary_time = 0
     SUMMARY_INTERVAL = 30 # 每30秒打印一次详细统计，避免刷屏
     
@@ -114,10 +115,19 @@ def main():
                 
                 df = DataProvider.get_realtime_quotes()
                 
-                # 如果配置为仅监控自选股，进行过滤
+                # 首次加载卖出监控持仓（需要全市场数据获取昨收价）
+                if not has_loaded_sell_watch and not df.empty:
+                    trade_manager.load_sell_watch_positions(df)
+                    has_loaded_sell_watch = True
+                
+                # 如果配置为仅监控自选股，进行过滤（同时保留卖出监控股票）
                 if Config.MONITOR_MODE == "WATCHLIST":
                     if hasattr(Config, 'WATCHLIST') and Config.WATCHLIST:
-                        df = df[df['symbol'].isin(Config.WATCHLIST)]
+                        # 合并买入监控和卖出监控的股票列表
+                        all_watch_symbols = set(Config.WATCHLIST)
+                        if hasattr(Config, 'SELL_WATCH_SYMBOLS'):
+                            all_watch_symbols.update(Config.SELL_WATCH_SYMBOLS)
+                        df = df[df['symbol'].isin(all_watch_symbols)]
                     else:
                         logging.warning("监控模式为 WATCHLIST 但列表为空，跳过处理")
                         df = pd.DataFrame() # 空数据

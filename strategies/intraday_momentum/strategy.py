@@ -10,10 +10,50 @@ class TradeManager:
         # 持仓清单: { symbol: { 'avg_cost': float, 'volume': int, 'name': str, 'break_vwap_time': datetime } }
         self.positions = {} 
         
+        # 存量持仓将在 load_sell_watch_positions 中加载（需要行情数据）
+        self._sell_watch_symbols = getattr(Config, 'SELL_WATCH_SYMBOLS', [])
+        
         # 卖出信号计时器 (跌破均线时间)
         # 结构: { symbol: first_break_timestamp }
         # 注意：为了逻辑解耦，我们将计时器放在 Position 结构里维护，或者单独维护。
         # 这里选择放在 positions 字典内部维护，方便管理
+    
+    def load_sell_watch_positions(self, market_data_df):
+        """
+        根据 SELL_WATCH_SYMBOLS 列表，从行情数据中获取昨收价和名称，初始化卖出监控持仓
+        """
+        if not self._sell_watch_symbols:
+            return
+            
+        yesterday = datetime.now().date() - timedelta(days=1)
+        loaded_count = 0
+        
+        for symbol in self._sell_watch_symbols:
+            if symbol in self.positions:
+                continue  # 已经加载过
+                
+            # 从行情数据中查找该股票
+            stock_row = market_data_df[market_data_df['symbol'] == symbol]
+            if stock_row.empty:
+                print(f"[WARN] 卖出监控股票 {symbol} 未找到行情数据，跳过")
+                continue
+            
+            row = stock_row.iloc[0]
+            pre_close = row.get('pre_close', 0.0)
+            name = row.get('name', symbol)
+            
+            self.positions[symbol] = {
+                'avg_cost': pre_close,  # 使用昨收价作为成本
+                'volume': 100,          # 默认100股，仅用于监控，不影响卖出逻辑
+                'name': name,
+                'break_vwap_time': None,
+                'buy_date': yesterday   # 设为昨天，确保可卖 (T+1)
+            }
+            loaded_count += 1
+            print(f"[INFO] 加载卖出监控: {name}({symbol}), 昨收={pre_close:.2f}")
+        
+        if loaded_count > 0:
+            print(f"[INFO] 共加载 {loaded_count} 只卖出监控股票")
         
     def execute_buy(self, symbol, name, price, money_to_spend):
         """

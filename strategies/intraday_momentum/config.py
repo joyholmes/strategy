@@ -3,8 +3,16 @@
 
 class Config:
     # --- 监控范围 ---
-    MONITOR_MODE = "ALL"           # 模式: "ALL" (全市场) 或 "WATCHLIST" (仅自选)
-    WATCHLIST = ["600030", "000001"] # 自选股列表 (仅在 WATCHLIST 模式下生效)
+    MONITOR_MODE = "WATCHLIST"           # 模式: "ALL" (全市场) 或 "WATCHLIST" (仅自选)
+    WATCHLIST = ["002163", "600678", "002177", "300885"] # 自选股列表 (仅在 WATCHLIST 模式下生效)
+    
+    # --- 存量持仓 (用于卖出监控) ---
+    # 只需填入股票代码，启动时自动获取昨收价作为成本、股票名称
+    # 示例: ["600030", "000001", "601318"]
+    SELL_WATCH_SYMBOLS = [
+        # "600030",  # 中信证券
+        # "000001",  # 平安银行
+    ]
 
     # --- 时间设置 ---
     TIME_AUCTION_CHECK = "09:24:59"
@@ -29,6 +37,6 @@ class Config:
     DATA_POLL_INTERVAL = 3                 # 数据轮询间隔(秒)
     
     # --- 日志设置 ---
-    LOG_DIR = "logs"
+    # 日志存放在策略目录下的 logs 文件夹
+    LOG_DIR = "/Users/joy/myworkspace/strategy/strategies/intraday_momentum/logs"
     LOG_FILE_PREFIX = "intraday_momentum"
-g
